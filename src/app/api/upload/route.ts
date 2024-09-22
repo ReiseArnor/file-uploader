@@ -9,10 +9,14 @@ export async function POST(req: any) {
         const osClient = new os.ObjectStorageClient({ authenticationDetailsProvider: provider });
 
         const putObjectRequest = await getPutObjectRequest(file);
-        const putObjectResponse = await osClient.putObject(putObjectRequest);
+        await osClient.putObject(putObjectRequest);
 
-        console.log(putObjectResponse);
-        return Response.json({ ok: true })
+        const url = await getSignedUrl(osClient, file.name);
+
+        return Response.json({
+            ok: true,
+            url,
+        })
     } catch (error) {
         return Response.json({ error: (error as any).message })
     }
@@ -53,4 +57,23 @@ const getBuffer = async (file: File) => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     return buffer;
+}
+
+const getSignedUrl = async (osClient: os.ObjectStorageClient, objectName: string) => {
+    const createPreauthenticatedRequestDetails = {
+        name: `preauth-${objectName}`,
+        objectName,
+        accessType: os.models.CreatePreauthenticatedRequestDetails.AccessType.ObjectRead,
+        timeExpires: new Date(process.env.OCI_FILE_EXPIRATION || ""),
+    }
+
+    const createPreauthenticatedRequestRequest: os.requests.CreatePreauthenticatedRequestRequest = {
+        namespaceName: process.env.OCI_BUCKET_NAMESPACE || "",
+        bucketName: process.env.OCI_BUCKET_NAME || "",
+        createPreauthenticatedRequestDetails: createPreauthenticatedRequestDetails,
+    };
+
+    const response = await osClient.createPreauthenticatedRequest(createPreauthenticatedRequestRequest);
+    const data = response.preauthenticatedRequest;
+    return `${data.fullPath}${data.objectName}`;
 }
