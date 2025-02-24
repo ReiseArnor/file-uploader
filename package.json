@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "formidable": "^3.5.1",
-    "next": "14.2.13",
+    "next": "14.2.21",
     "oci-common": "^2.94.0",
     "oci-identity": "^2.94.0",
     "oci-objectstorage": "^2.94.0",
